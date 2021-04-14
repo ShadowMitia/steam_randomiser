@@ -1,10 +1,10 @@
 [package]
 name = "steam_randomiser"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Dimitri Belopopsky <dimitri@belopopsky.com>"]
 edition = "2018"
 license = "MIT"
-description = "A tool to search files"
+description = "Randomly pick an installed Steam game!"
 readme = "README.md"
 homepage = "https://github.com/ShadowMitia/steam_randomiser"
 repository = "https://github.com/ShadowMitia/steam_randomiser"
