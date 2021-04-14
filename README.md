@@ -8,7 +8,10 @@ Perfect when you don't know which game to play from all of those bundles you've 
 
 ## Usage
 
+Currently works on Windows and Linux. MacOS is TODO.
+
 Double click on the executable or run from a terminal.
+And then play your awesome and randomly picked game!
 
 ## Build
 
@@ -17,3 +20,4 @@ git clone https://github.com/ShadowMitia/steam_randomiser.git
 cd steam_randomiser
 cargo build
 ```
+
