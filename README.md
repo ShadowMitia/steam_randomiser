@@ -8,8 +8,9 @@ Just run `Steam Randomiser` and it will randomly choose from one of your **insta
 
 Perfect when you don't know which game to play from all of those bundles you've bought all these years!
 
-## Installation
-### Cargo
+### Installation
+
+#### Cargo
 
 You can easily install with `cargo`
 
@@ -17,24 +18,29 @@ You can easily install with `cargo`
 cargo install steam_randomiser
 ```
 
-### Binary
+#### Binary
 
 You can download the latest binary release [here](https://github.com/ShadowMitia/steam_randomiser/releases)
 
+### Usage
 
-## Usage
-
-Currently works on Windows and Linux. MacOS is TODO.
 Double click on the executable or run from a terminal.
 And then play your awesome and randomly picked game!
 
-# Development
+#### Supported systems
 
-## Build
+|         | Vanilla | Flatpak |
+| ------- | :-----: | ------: |
+| Windows |   ✅    |     N/A |
+| MacOS   |   ❌    |     N/A |
+| Linux   |   ✅    |      ✅ |
+
+## Development
+
+### Build
 
 ```sh
 git clone https://github.com/ShadowMitia/steam_randomiser.git
 cd steam_randomiser
 cargo build
 ```
-
