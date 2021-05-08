@@ -1,13 +1,10 @@
-use std::{
-    fs::DirEntry,
-    path::{Path, PathBuf},
-    process::{Command, Stdio},
-};
+use std::{fs::DirEntry, path::{Path, PathBuf}, process::{Child, Command, Stdio}};
 
 use rand::seq::SliceRandom;
 
 const FLATPAK_APPLICATIONS_PATH: &str = ".var/app/com.valvesoftware.Steam/data/Steam";
 const VANILLA_APPLICATIONS_PATH_NIX: &str = r#".local/share/Steam"#;
+#[cfg(target_os = "windows")]
 const VANILLA_APPLICATIONS_PATH_WINDOWS: &str = r#"C:\Program Files (x86)\Steam"#;
 
 const MANIFEST_DIR: &str = "steamapps/";
@@ -159,8 +156,8 @@ fn detect_steam() -> SteamKind {
 }
 
 #[cfg(target_os = "linux")]
-fn run(steam_type: SteamKind, id: &str) {
-    match steam_type {
+fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
+    let child  = match steam_type {
         SteamKind::Flatpak => std::process::Command::new("flatpak")
             .args(&[
                 "run",
@@ -169,19 +166,20 @@ fn run(steam_type: SteamKind, id: &str) {
             ])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .spawn(),
+            .spawn()?,
         SteamKind::Vanilla => std::process::Command::new("steam")
             .arg(&generate_steam_rungame(id))
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .spawn(),
+            .spawn()?,
         SteamKind::NotFound => panic!("Couldn't find steam!"),
     };
+    Ok(child)
 }
 
 #[cfg(target_os = "windows")]
-fn run(steam_type: SteamKind, id: &str) {
-    match steam_type {
+fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
+    let child = match steam_type {
         SteamKind::Vanilla => {
             std::process::Command::new(r#"C:\Program Files (x86)\Steam\steam.exe"#)
                 .arg(&generate_steam_rungame(id))
@@ -191,6 +189,7 @@ fn run(steam_type: SteamKind, id: &str) {
         }
         _ => panic!("Couldn't find steam!"),
     };
+    Some(child)
 }
 
 fn main() {
@@ -231,5 +230,5 @@ fn main() {
 
     println!("Randomly launching \"{}\"! Have fun!", game);
 
-    run(steam_type, id);
+    let _ = run(steam_type, id).unwrap();
 }
