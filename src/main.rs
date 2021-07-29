@@ -1,11 +1,19 @@
-use std::{fs::DirEntry, path::{Path, PathBuf}, process::{Child, Command, Stdio}};
-
+use clap::{AppSettings, Clap};
 use rand::seq::SliceRandom;
+use std::{
+    fs::DirEntry,
+    path::{Path, PathBuf},
+    process::{Child, Command, Stdio},
+};
 
 const FLATPAK_APPLICATIONS_PATH: &str = ".var/app/com.valvesoftware.Steam/data/Steam";
-const VANILLA_APPLICATIONS_PATH_NIX: &str = r#".local/share/Steam"#;
+#[cfg(target_os = "linux")]
+const VANILLA_APPLICATIONS_PATH: &str = r#".local/share/Steam"#;
 #[cfg(target_os = "windows")]
-const VANILLA_APPLICATIONS_PATH_WINDOWS: &str = r#"C:\Program Files (x86)\Steam"#;
+const VANILLA_APPLICATIONS_PATH: &str = r#"C:\Program Files (x86)\Steam"#;
+#[cfg(target_os = "macos")]
+const VANILLA_APPLICATIONS_PATH: &str = r#"Library/Application Support/Steam"#;
+
 
 const MANIFEST_DIR: &str = "steamapps/";
 
@@ -26,6 +34,7 @@ fn is_proton(app_name: &str) -> bool {
     false
 }
 
+/// List of names of applications/games we don't want to launch.
 fn is_blacklisted(app_name: &str) -> bool {
     let steam_libs = [
         "Steamworks Common Redistributables",
@@ -39,6 +48,7 @@ fn is_blacklisted(app_name: &str) -> bool {
         || app_name.starts_with("Steam Linux Runtime")
 }
 
+/// Find other install directories which are not the default one
 fn get_other_install_dirs(path: &Path) -> Vec<String> {
     let mut path = path.to_path_buf();
     path.push("libraryfolders.vdf");
@@ -52,9 +62,9 @@ fn get_other_install_dirs(path: &Path) -> Vec<String> {
     let lines = lines.lines().skip(2).collect::<Vec<&str>>();
     for line in lines.iter().take(lines.len() - 1) {
         let path = line
-        .split('\t')
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<&str>>();
+            .split('\t')
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<&str>>();
 
         let tag = path[0].replace("\"", "");
         let path = path[1].trim().replace("\"", "");
@@ -149,7 +159,16 @@ fn detect_steam() -> SteamKind {
 #[cfg(target_os = "windows")]
 fn detect_steam() -> SteamKind {
     let has_steam_vanilla = which::which(r#"C:\Program Files (x86)\Steam\steam.exe"#).is_ok();
-    match (has_steam_vanilla) {
+    match has_steam_vanilla {
+        true => SteamKind::Vanilla,
+        _ => SteamKind::NotFound,
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn detect_steam() -> SteamKind {
+    let has_steam_vanilla = which::which("steam").is_ok();
+    match has_steam_vanilla {
         true => SteamKind::Vanilla,
         _ => SteamKind::NotFound,
     }
@@ -157,7 +176,7 @@ fn detect_steam() -> SteamKind {
 
 #[cfg(target_os = "linux")]
 fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
-    let child  = match steam_type {
+    let child = match steam_type {
         SteamKind::Flatpak => std::process::Command::new("flatpak")
             .args(&[
                 "run",
@@ -185,18 +204,48 @@ fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
                 .arg(&generate_steam_rungame(id))
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
-                .spawn()
+                .spawn()?
         }
         _ => panic!("Couldn't find steam!"),
     };
-    Some(child)
+    Ok(child)
+}
+
+#[cfg(target_os = "macos")]
+fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
+    let child = match steam_type {
+        SteamKind::Vanilla => std::process::Command::new("steam")
+            .arg(&generate_steam_rungame(id))
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?,
+        SteamKind::NotFound => panic!("Couldn't find steam!"),
+    };
+    Ok(child)
+}
+
+/// Randomly picks an installed game from your Steam library and launches it.
+#[derive(Clap)]
+#[clap(
+    version = "0.2.0"    
+)]
+#[clap(setting = AppSettings::ColoredHelp)]
+struct Opts {
+    /// Show short message telling which game is being launched
+    #[clap(short, long, parse(from_occurrences))]
+    verbose: i32,
+    /// Runs the program but doesn't launch the game.
+    #[clap(short, long)]
+    dry_run: bool
 }
 
 fn main() {
+    let opts: Opts = Opts::parse();
+
     let steam_type = detect_steam();
 
     if steam_type == SteamKind::NotFound {
-        eprintln!("Couldn't find Steam.");
+        eprintln!("Couldn't find Steam. Please make sure it is installed.");
         return;
     }
 
@@ -204,10 +253,7 @@ fn main() {
         let mut home = dirs::home_dir().unwrap();
         match steam_type {
             SteamKind::Flatpak => home.push(FLATPAK_APPLICATIONS_PATH),
-            #[cfg(target_os = "linux")]
-            SteamKind::Vanilla => home.push(VANILLA_APPLICATIONS_PATH_NIX),
-            #[cfg(target_os = "windows")]
-            SteamKind::Vanilla => home.push(VANILLA_APPLICATIONS_PATH_WINDOWS),
+            SteamKind::Vanilla => home.push(VANILLA_APPLICATIONS_PATH),
             _ => {}
         }
         home
@@ -228,7 +274,11 @@ fn main() {
 
     let (game, id) = games.choose(&mut rand::thread_rng()).unwrap();
 
-    println!("Randomly launching \"{}\"! Have fun!", game);
-
-    let _ = run(steam_type, id).unwrap();
+    if opts.verbose > 0 {
+        println!("Randomly launching \"{}\"! Have fun!", game);
+    }
+    
+    if !opts.dry_run {
+        let _ = run(steam_type, id).unwrap();
+    }
 }
