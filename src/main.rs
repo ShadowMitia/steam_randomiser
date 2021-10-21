@@ -17,10 +17,12 @@ const VANILLA_APPLICATIONS_PATH: &str = r#"Library/Application Support/Steam"#;
 
 const MANIFEST_DIR: &str = "steamapps/";
 
+/// Builds the appropriate url to run the game
 fn generate_steam_rungame(id: &str) -> String {
     format!("steam://rungameid/{}", id)
 }
 
+/// Detect if app is a Proton runtime
 fn is_proton(app_name: &str) -> bool {
     if app_name.starts_with("Proton") {
         let number = app_name.split(' ').collect::<Vec<&str>>();
@@ -75,6 +77,7 @@ fn get_other_install_dirs(path: &Path) -> Vec<String> {
     libs
 }
 
+// Parse manifest and get list of game names with their ids.
 fn get_games_from_manifest_in_path(path: &Path) -> Vec<(String, String)> {
     let dir = std::fs::read_dir(path).unwrap();
 
@@ -129,6 +132,7 @@ enum SteamKind {
     NotFound,
 }
 
+/// Detect if Steam is installed.
 #[cfg(target_os = "linux")]
 fn detect_steam() -> SteamKind {
     let has_steam_vanilla = which::which("steam").is_ok();
@@ -156,6 +160,7 @@ fn detect_steam() -> SteamKind {
     }
 }
 
+/// Detect if Steam is installed.
 #[cfg(target_os = "windows")]
 fn detect_steam() -> SteamKind {
     let has_steam_vanilla = which::which(r#"C:\Program Files (x86)\Steam\steam.exe"#).is_ok();
@@ -165,6 +170,7 @@ fn detect_steam() -> SteamKind {
     }
 }
 
+/// Detect if Steam is installed.
 #[cfg(target_os = "macos")]
 fn detect_steam() -> SteamKind {
     let has_steam_vanilla = which::which("steam").is_ok();
@@ -174,6 +180,7 @@ fn detect_steam() -> SteamKind {
     }
 }
 
+/// Launche the game from its id using the appropriate Steam environment
 #[cfg(target_os = "linux")]
 fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
     let child = match steam_type {
@@ -196,6 +203,7 @@ fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
     Ok(child)
 }
 
+/// Launche the game from its id using the appropriate Steam environment
 #[cfg(target_os = "windows")]
 fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
     let child = match steam_type {
@@ -211,6 +219,7 @@ fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
     Ok(child)
 }
 
+/// Launche the game from its id using the appropriate Steam environment
 #[cfg(target_os = "macos")]
 fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
     let child = match steam_type {
