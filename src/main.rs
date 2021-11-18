@@ -1,19 +1,19 @@
-use clap::{AppSettings, Clap};
+use clap::Parser;
 use rand::seq::SliceRandom;
-use std::{
-    fs::DirEntry,
-    path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
-};
+use std::{fs::DirEntry, path::{Path, PathBuf}, process::{Child, Command, Stdio}};
 
 const FLATPAK_APPLICATIONS_PATH: &str = ".var/app/com.valvesoftware.Steam/data/Steam";
 #[cfg(target_os = "linux")]
-const VANILLA_APPLICATIONS_PATH: &str = r#".local/share/Steam"#;
+const VANILLA_APPLICATIONS_PATHS: [&str; 2] = [
+    r#".local/share/steam"#,
+    r#".steam/steam"#
+];
 #[cfg(target_os = "windows")]
 const VANILLA_APPLICATIONS_PATH: &str = r#"C:\Program Files (x86)\Steam"#;
 #[cfg(target_os = "macos")]
 const VANILLA_APPLICATIONS_PATH: &str = r#"Library/Application Support/Steam"#;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const MANIFEST_DIR: &str = "steamapps/";
 
@@ -45,33 +45,53 @@ fn is_blacklisted(app_name: &str) -> bool {
     ];
 
     steam_libs.iter().any(|&b| b == app_name)
-        || app_name.ends_with("Soundtrack") // This **should** deal with downloaded albums
+        || app_name.ends_with("Soundtrack") // This **should** deal with downloaded albums, and ignore them
         || is_proton(app_name)
         || app_name.starts_with("Steam Linux Runtime")
 }
+
+// fn parse_vdf(path_to_vdf: &Path) -> HashMap<String, String> {
+//     let mut res = HashMap::new();
+
+//     let contents = std::fs::read_to_string(path_to_vdf);
+//     let lines = contents.unwrap();
+//     let lines:Vec<&str> = lines.lines().collect();
+
+//     for line in 0..lines.len() {
+//         println!("Working on {:?}", lines[line]);
+//         if line+1 < lines.len() && lines[line+1].trim() == "{" {
+
+//         } else{
+//             let key_value:Vec<&str> = lines[line].split_whitespace().collect();
+//             if key_value.len() < 2 {
+//                 continue;
+//             }
+//             println!("splitted {:?}", key_value);
+//             res.insert(key_value[0].to_string(), key_value[1].to_string());
+            
+//         }
+//     }
+
+//     res
+// }
 
 /// Find other install directories which are not the default one
 fn get_other_install_dirs(path: &Path) -> Vec<String> {
     let mut path = path.to_path_buf();
     path.push("libraryfolders.vdf");
 
+    let path = path.as_path();
+
     let contents = std::fs::read_to_string(path);
     let lines = contents.unwrap();
 
     let mut libs = Vec::new();
 
-    // NOTE: I'm assuming that after the "TimeNextStatsReport" and "ContentStatsID" come the alternative paths
-    let lines = lines.lines().skip(2).collect::<Vec<&str>>();
-    for line in lines.iter().take(lines.len() - 1) {
-        let path = line
-            .split('\t')
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<&str>>();
-
-        let tag = path[0].replace("\"", "");
-        let path = path[1].trim().replace("\"", "");
-        if tag.chars().all(|c| c.is_digit(10)) {
-            libs.push(path.to_string());
+    let lines = lines.lines();
+    for line in lines {
+        if line.contains("path") {
+            let splitted:Vec<&str> = line.split_whitespace().collect();
+            libs.push(splitted[1][1..splitted[1].len()-1].to_string());
         }
     }
     libs
@@ -234,11 +254,10 @@ fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
 }
 
 /// Randomly picks an installed game from your Steam library and launches it.
-#[derive(Clap)]
+#[derive(Parser)]
 #[clap(
-    version = "0.2.0"    
+    version = VERSION 
 )]
-#[clap(setting = AppSettings::ColoredHelp)]
 struct Opts {
     /// Show short message telling which game is being launched
     #[clap(short, long, parse(from_occurrences))]
@@ -262,6 +281,13 @@ fn main() {
         let mut home = dirs::home_dir().unwrap();
         match steam_type {
             SteamKind::Flatpak => home.push(FLATPAK_APPLICATIONS_PATH),
+            #[cfg(target_os = "linux")]
+            SteamKind::Vanilla => home.push(VANILLA_APPLICATIONS_PATHS.iter().find(|&&p| {
+                let mut test_path = home.to_path_buf();
+                test_path.push(p);
+                test_path.exists() && test_path.is_dir()
+            }).unwrap()),
+            #[cfg(not(target_os = "linux"))]
             SteamKind::Vanilla => home.push(VANILLA_APPLICATIONS_PATH),
             _ => {}
         }

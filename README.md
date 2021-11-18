@@ -1,12 +1,11 @@
 # Steam Randomiser
 
-[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=shadowmitia&repo=steam_randomiser)](https://github.com/anuraghazra/github-readme-stats)
+[![license shields.io](https://img.shields.io/github/license/shadowMitia/steam_randomiser)](https://github.com/ShadowMitia/steam_randomiser/blob/master/LICENSE.txt)
+[![GitHub stars badge shields.io](https://img.shields.io/github/stars/shadowMitia/steam_randomiser)](https://github.com/shadowMitia/steam_randomiser)
 
 Don't know what to play on [Steam](https://store.steampowered.com/)?
 
-Just run `Steam Randomiser` and it will randomly choose from one of your **installed** games!
-
-Perfect when you don't know which game to play from all of those bundles you've bought all these years!
+Just run [`Steam Randomiser`](https://github.com/shadowMitia/steam_randomiser) and it will randomly choose from one of your (numerous) **installed** games!
 
 ### Installation
 
@@ -29,11 +28,11 @@ And then play your awesome and randomly picked game!
 
 #### Supported systems
 
-|         | Vanilla | Flatpak |
-| ------- | :-----: | ------: |
-| Windows |   ✅    |     N/A |
-| MacOS   |   ❌    |     N/A |
-| Linux   |   ✅    |      ✅ |
+|         |         Vanilla         | Flatpak |
+| ------- | :---------------------: | ------: |
+| Windows |           ✅            |     N/A |
+| MacOS   | ❌ (experimental build) |     N/A |
+| Linux   |           ✅            |      ✅ |
 
 ## Development
 
