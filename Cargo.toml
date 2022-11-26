@@ -1,6 +1,6 @@
 [package]
 name = "steam_randomiser"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["Dimitri Belopopsky <dimitri@belopopsky.com>"]
 edition = "2021"
 license = "MIT"
@@ -17,11 +17,12 @@ categories = ["command-line-utilities"]
 [dependencies]
 dirs = "4.0.0"
 rand = "0.8.5"
-which = "4.2.5"
-clap = { version = "3.1.18", features = ["derive"] }
+which = "4.3.0"
+clap = { version = "4.0.27", features = ["std", "derive"], default-features = false }
 
 
 [profile.release]
 lto = true
 strip = true
+opt-level = "z"
 codegen-units = 1
