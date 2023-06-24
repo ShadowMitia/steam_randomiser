@@ -6,6 +6,7 @@ use std::{
     process::{Child, Command, Stdio},
 };
 
+#[cfg(target_os = "linux")]
 const FLATPAK_APPLICATIONS_PATH: &str = ".var/app/com.valvesoftware.Steam/data/Steam";
 #[cfg(target_os = "linux")]
 const VANILLA_APPLICATIONS_PATHS: [&str; 2] = [r#".local/share/steam"#, r#".steam/steam"#];
@@ -100,7 +101,17 @@ fn get_other_install_dirs(path: &Path) -> Vec<String> {
 
 // Parse manifest and get list of game names with their ids.
 fn get_games_from_manifest_in_path(path: &Path) -> Vec<(String, String)> {
-    let dir = std::fs::read_dir(path).unwrap();
+    let dir = {
+        match std::fs::read_dir(path) {
+            Ok(path) => path,
+            Err(_) => {
+                // sometimes steam can have a corrupted library path, this is
+                // probably fine since it only appeared for paths not in use for
+                // me. Skip library and hope this is fine.
+                return Vec::new();
+            }
+        }
+    };
 
     let manifest_files = dir
         .map(|e| e.unwrap())
@@ -121,6 +132,11 @@ fn get_games_from_manifest_in_path(path: &Path) -> Vec<(String, String)> {
 
         let mut game = "".to_string();
         let mut id = "".to_string();
+
+        if lines.is_empty() {
+            // sometimes manifest files are empty or corrupted, skip them
+            return games;
+        }
 
         for line in lines.iter().take(lines.len() - 1) {
             let line = line
@@ -149,6 +165,8 @@ fn get_games_from_manifest_in_path(path: &Path) -> Vec<(String, String)> {
 #[derive(Debug, PartialEq)]
 enum SteamKind {
     Vanilla,
+    AltPath(PathBuf),
+    #[cfg(target_os = "linux")]
     Flatpak,
     NotFound,
 }
@@ -185,10 +203,33 @@ fn detect_steam() -> SteamKind {
 #[cfg(target_os = "windows")]
 fn detect_steam() -> SteamKind {
     let has_steam_vanilla = which::which(r#"C:\Program Files (x86)\Steam\steam.exe"#).is_ok();
-    match has_steam_vanilla {
-        true => SteamKind::Vanilla,
-        _ => SteamKind::NotFound,
+    if has_steam_vanilla {
+        return SteamKind::Vanilla;
     }
+    match get_steam_exe_path_from_reg() {
+        Ok(binary_path) => {
+            if which::which(binary_path.clone() + r#"\steam.exe"#).is_ok() {
+                SteamKind::AltPath(binary_path.into())
+            } else {
+                eprintln!("steam.exe was not in install folder");
+                eprintln!("expected path according to registry: {:?}", binary_path);
+                SteamKind::NotFound
+            }
+        }
+        Err(err) => {
+            eprintln!("Couldn't find steam in registry due to error: {}", err);
+            SteamKind::NotFound
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+/// Attempt to find steam's install location via the windows registry
+fn get_steam_exe_path_from_reg() -> std::io::Result<String> {
+    use winreg::enums::*;
+    let hklm = winreg::RegKey::predef(HKEY_LOCAL_MACHINE);
+    let steam = hklm.open_subkey(r#"SOFTWARE\WOW6432Node\Valve\Steam"#)?;
+    steam.get_value("InstallPath")
 }
 
 /// Detect if Steam is installed.
@@ -225,20 +266,23 @@ fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
     Ok(child)
 }
 
-/// Launche the game from its id using the appropriate Steam environment
+/// Launch the game from its id using the appropriate Steam environment
 #[cfg(target_os = "windows")]
 fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
-    let child = match steam_type {
-        SteamKind::Vanilla => {
-            std::process::Command::new(r#"C:\Program Files (x86)\Steam\steam.exe"#)
-                .arg(&generate_steam_rungame(id))
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()?
-        }
+    let binary_path: String = match steam_type {
+        SteamKind::Vanilla => r#"C:\Program Files (x86)\Steam\steam.exe"#.into(),
+        SteamKind::AltPath(binary_path) => binary_path
+            .join("steam.exe")
+            .into_os_string()
+            .into_string()
+            .unwrap(),
         _ => panic!("Couldn't find steam!"),
     };
-    Ok(child)
+    Command::new(&binary_path)
+        .arg(&generate_steam_rungame(id))
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
 }
 
 /// Launche the game from its id using the appropriate Steam environment
@@ -282,6 +326,7 @@ fn main() {
     let mut path = {
         let mut home = dirs::home_dir().unwrap();
         match steam_type {
+            #[cfg(target_os = "linux")]
             SteamKind::Flatpak => home.push(FLATPAK_APPLICATIONS_PATH),
             #[cfg(target_os = "linux")]
             SteamKind::Vanilla => home.push(
@@ -296,6 +341,7 @@ fn main() {
             ),
             #[cfg(not(target_os = "linux"))]
             SteamKind::Vanilla => home.push(VANILLA_APPLICATIONS_PATH),
+            SteamKind::AltPath(ref path) => home = path.clone(),
             _ => {}
         }
         home

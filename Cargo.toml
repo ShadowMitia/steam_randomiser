@@ -19,6 +19,7 @@ dirs = "4.0.0"
 rand = "0.8.5"
 which = "4.3.0"
 clap = { version = "4.0.27", features = ["std", "derive"], default-features = false }
+winreg = "0.50"
 
 
 [profile.release]
