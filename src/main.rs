@@ -257,21 +257,21 @@ fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
 }
 
 /// Randomly picks an installed game from your Steam library and launches it.
-#[derive(Parser)]
-#[clap(
+#[derive(Parser, Debug)]
+#[clap(about,
     version = VERSION
 )]
 struct Opts {
-    /// Show short message telling which game is being launched
+    /// Shows program output (game launched, errors...)
     #[clap(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
-    /// Runs the program but doesn't launch the game.
+    /// Runs the program but doesn't actually launch the game.
     #[clap(short, long)]
     dry_run: bool,
 }
 
 fn main() {
-    let opts: Opts = Opts::parse();
+    let opts = Opts::parse();
 
     let steam_type = detect_steam();
 
@@ -325,8 +325,8 @@ fn main() {
             let _ = run(steam_type, id).unwrap();
         }
     } else {
-      if opts.verbose > 0 {
-        println!("Nothing to launch. Install some games!");
-      }
+        if opts.verbose > 0 {
+            println!("Nothing to launch. Install some games!");
+        }
     }
 }

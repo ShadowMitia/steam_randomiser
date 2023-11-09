@@ -18,7 +18,7 @@ categories = ["command-line-utilities"]
 dirs = "5.0.1"
 rand = "0.8.5"
 which = "5.0.0"
-clap = { version = "4.4.7", features = ["std", "derive"], default-features = false }
+clap = { version = "4.4.7", features = ["derive"] }
 
 
 [profile.release]
