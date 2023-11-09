@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 use std::{
     fs::DirEntry,
     path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
+    process::{Child, Stdio},
 };
 
 #[cfg(target_os = "linux")]
@@ -150,6 +150,7 @@ fn get_games_from_manifest_in_path(path: &Path) -> Vec<(String, String)> {
 #[derive(Debug, PartialEq)]
 enum SteamKind {
     Vanilla,
+    #[cfg(target_os = "linux")]
     Flatpak,
     NotFound,
 }
@@ -158,12 +159,12 @@ enum SteamKind {
 #[cfg(target_os = "linux")]
 fn detect_steam() -> SteamKind {
     let has_steam_vanilla = which::which("steam").is_ok();
-    let flatpak_list = Command::new("flatpak")
+    let flatpak_list = std::process::Command::new("flatpak")
         .arg("list")
         .stdout(Stdio::piped())
         .spawn()
         .unwrap();
-    let mut flatpak_steam_output = Command::new("grep")
+    let mut flatpak_steam_output = std::process::Command::new("grep")
         .stdin(flatpak_list.stdout.unwrap())
         .arg("-c")
         .arg("Steam")
@@ -283,6 +284,7 @@ fn main() {
     let mut path = {
         let mut home = dirs::home_dir().unwrap();
         match steam_type {
+            #[cfg(target_os = "linux")]
             SteamKind::Flatpak => home.push(FLATPAK_APPLICATIONS_PATH),
             #[cfg(target_os = "linux")]
             SteamKind::Vanilla => home.push(
