@@ -1,6 +1,6 @@
 [package]
 name = "steam_randomiser"
-version = "0.4.2"
+version = "0.5.0"
 authors = ["Dimitri Belopopsky <dimitri@belopopsky.com>"]
 edition = "2021"
 license = "MIT"
