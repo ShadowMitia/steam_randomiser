@@ -6,6 +6,7 @@ use std::{
     process::{Child, Command, Stdio},
 };
 
+#[cfg(target_os = "linux")]
 const FLATPAK_APPLICATIONS_PATH: &str = ".var/app/com.valvesoftware.Steam/data/Steam";
 #[cfg(target_os = "linux")]
 const VANILLA_APPLICATIONS_PATHS: [&str; 2] = [r#".local/share/steam"#, r#".steam/steam"#];
@@ -314,13 +315,18 @@ fn main() {
         games.extend(get_games_from_manifest_in_path(&path));
     }
 
-    let (game, id) = games.choose(&mut rand::thread_rng()).unwrap();
+    let chosen = games.choose(&mut rand::thread_rng());
+    if let Some((game, id)) = chosen {
+        if opts.verbose > 0 {
+            println!("Randomly launching \"{}\"! Have fun!", game);
+        }
 
-    if opts.verbose > 0 {
-        println!("Randomly launching \"{}\"! Have fun!", game);
-    }
-
-    if !opts.dry_run {
-        let _ = run(steam_type, id).unwrap();
+        if !opts.dry_run {
+            let _ = run(steam_type, id).unwrap();
+        }
+    } else {
+      if opts.verbose > 0 {
+        println!("Nothing to launch. Install some games!");
+      }
     }
 }
