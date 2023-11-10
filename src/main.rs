@@ -6,6 +6,9 @@ use std::{
     process::{Child, Stdio},
 };
 
+mod cli;
+use cli::Opts;
+
 #[cfg(target_os = "linux")]
 const FLATPAK_APPLICATIONS_PATH: &str = ".var/app/com.valvesoftware.Steam/data/Steam";
 #[cfg(target_os = "linux")]
@@ -14,8 +17,6 @@ const VANILLA_APPLICATIONS_PATHS: [&str; 2] = [r#".local/share/steam"#, r#".stea
 const VANILLA_APPLICATIONS_PATH: &str = r#"C:\Program Files (x86)\Steam"#;
 #[cfg(target_os = "macos")]
 const VANILLA_APPLICATIONS_PATH: &str = r#"Library/Application Support/Steam"#;
-
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const MANIFEST_DIR: &str = "steamapps/";
 
@@ -257,20 +258,6 @@ fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
     Ok(child)
 }
 
-/// Randomly picks an installed game from your Steam library and launches it.
-#[derive(Parser, Debug)]
-#[clap(about,
-    version = VERSION
-)]
-struct Opts {
-    /// Shows program output (game launched, errors...)
-    #[clap(short, long, action = clap::ArgAction::Count)]
-    verbose: u8,
-    /// Runs the program but doesn't actually launch the game.
-    #[clap(short, long)]
-    dry_run: bool,
-}
-
 fn main() {
     let opts = Opts::parse();
 
@@ -326,9 +313,7 @@ fn main() {
         if !opts.dry_run {
             let _ = run(steam_type, id).unwrap();
         }
-    } else {
-        if opts.verbose > 0 {
-            println!("Nothing to launch. Install some games!");
-        }
+    } else if opts.verbose > 0 {
+        println!("Nothing to launch. Install some games!");
     }
 }

@@ -14,12 +14,17 @@ categories = ["command-line-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+build = "build.rs"
+
 [dependencies]
 dirs = "5.0.1"
 rand = "0.8.5"
 which = "5.0.0"
 clap = { version = "4.4.7", features = ["derive"] }
 
+[build-dependencies]
+clap = { version = "4.4.7", features = ["derive"] }
+clap_complete = { version = "4.4.4", features = ["unstable-dynamic"] }
 
 [profile.release]
 lto = true
