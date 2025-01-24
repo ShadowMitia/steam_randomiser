@@ -163,10 +163,9 @@ fn detect_steam() -> SteamKind {
     let flatpak_list = std::process::Command::new("flatpak")
         .arg("list")
         .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
+        .spawn();
     let mut flatpak_steam_output = std::process::Command::new("grep")
-        .stdin(flatpak_list.stdout.unwrap())
+        .stdin(flatpak_list.unwrap().stdout.unwrap())
         .arg("-c")
         .arg("Steam")
         .output()
@@ -218,7 +217,7 @@ fn run(steam_type: SteamKind, id: &str) -> std::io::Result<Child> {
             .stderr(Stdio::null())
             .spawn()?,
         SteamKind::Vanilla => std::process::Command::new("steam")
-            .arg(&generate_steam_rungame(id))
+            .arg(generate_steam_rungame(id))
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()?,
@@ -311,7 +310,7 @@ fn main() {
         }
 
         if !opts.dry_run {
-            let _ = run(steam_type, id).unwrap();
+            let _ = run(steam_type, id).unwrap().wait();
         }
     } else if opts.verbose > 0 {
         println!("Nothing to launch. Install some games!");
